@@ -13,6 +13,7 @@ pathlib = "^1.0.1"
 tqdm = "^4.66.1"
 torch = "2.0.0"
 torchvision = "0.15.1"
+dvc = {version = "3.26.2", extras = ["gdrive"]}
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.4.0"

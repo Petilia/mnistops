@@ -1,6 +1,8 @@
 import torch
 import torchvision
 
+from .constants import DATASET_ROOT
+
 
 def get_loaders(batch_size=32):
     transform = torchvision.transforms.Compose(
@@ -12,9 +14,9 @@ def get_loaders(batch_size=32):
 
     train_loader = torch.utils.data.DataLoader(
         torchvision.datasets.MNIST(
-            "./files/",
+            DATASET_ROOT,
             train=True,
-            download=True,
+            download=False,
             transform=transform,
         ),
         batch_size=batch_size,
@@ -23,9 +25,9 @@ def get_loaders(batch_size=32):
 
     test_loader = torch.utils.data.DataLoader(
         torchvision.datasets.MNIST(
-            "./files/",
+            DATASET_ROOT,
             train=False,
-            download=True,
+            download=False,
             transform=transform,
         ),
         batch_size=batch_size,
