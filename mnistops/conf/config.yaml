@@ -1,0 +1,17 @@
+model:
+  n_classes: 10
+  dropout: 0.3
+
+data:
+  root_path: "./data/"
+  batch_size: 32
+
+train:
+  learning_rate: 1e-3
+  n_epoch: 15
+
+artifacts:
+  save_ckpt: true
+  ckpt_path: "./outputs/checkpoints"
+  best_model_name: "best_model.pth"
+  metric_file_name: "metrics.txt"

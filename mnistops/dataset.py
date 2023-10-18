@@ -1,10 +1,8 @@
 import torch
 import torchvision
 
-from .constants import DATASET_ROOT
 
-
-def get_loaders(batch_size=32):
+def get_loaders(batch_size=32, root_path="./data/"):
     transform = torchvision.transforms.Compose(
         [
             torchvision.transforms.ToTensor(),
@@ -14,7 +12,7 @@ def get_loaders(batch_size=32):
 
     train_loader = torch.utils.data.DataLoader(
         torchvision.datasets.MNIST(
-            DATASET_ROOT,
+            root_path,
             train=True,
             download=False,
             transform=transform,
@@ -25,7 +23,7 @@ def get_loaders(batch_size=32):
 
     test_loader = torch.utils.data.DataLoader(
         torchvision.datasets.MNIST(
-            DATASET_ROOT,
+            root_path,
             train=False,
             download=False,
             transform=transform,

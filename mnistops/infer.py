@@ -3,15 +3,14 @@ from pathlib import Path
 import torch
 from sklearn.metrics import accuracy_score
 
-from .constants import BATCH_SIZE, BEST_MODEL_NAME, CKPT_PATH, METRIC_FILE_NAME
 from .dataset import get_loaders
 from .model import SimpleNet
 
 
-def infer():
+def infer(cfg):
     model = SimpleNet()
 
-    model_path = Path(CKPT_PATH) / BEST_MODEL_NAME
+    model_path = Path(cfg.artifacts.ckpt_path) / cfg.artifacts.best_model_name
     if model_path.exists():
         model.load_state_dict(torch.load(model_path))
     else:
@@ -19,7 +18,9 @@ def infer():
             "Error: No model checkpoint found. Please train the model first."
         )
 
-    _, test_loader = get_loaders(batch_size=BATCH_SIZE)
+    _, test_loader = get_loaders(
+        batch_size=cfg.data.batch_size, root_path=cfg.data.root_path
+    )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -41,7 +42,9 @@ def infer():
 
     accuracy = accuracy_score(gt, preds)
 
-    metric_filename = Path(CKPT_PATH) / METRIC_FILE_NAME
+    metric_filename = (
+        Path(cfg.artifacts.ckpt_path) / cfg.artifacts.metric_file_name
+    )
 
     with open(metric_filename, "w") as f:
         f.write(f"accuracy={accuracy}")
