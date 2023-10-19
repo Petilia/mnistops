@@ -4,6 +4,7 @@ __pycache__
 dist
 outputs
 mlruns
+checkpoints
 .logs
 wandb
 mnistops/notebooks/trash.ipynb

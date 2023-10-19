@@ -18,24 +18,31 @@ class MNISTDataModule(pl.LightningDataModule):
             ]
         )
 
-    def setup(self, stage: Optional[str] = None):
-        self.train_dataset = torchvision.datasets.MNIST(
-            self.root_path,
-            train=True,
-            download=False,
-            transform=self.transform,
-        )
+    def setup(self, stage: Optional[str]):
+        if stage == "fit":
+            self.train_dataset = torchvision.datasets.MNIST(
+                self.root_path,
+                train=True,
+                download=False,
+                transform=self.transform,
+            )
 
-        print(len(self.train_dataset))
+            self.val_dataset = torchvision.datasets.MNIST(
+                self.root_path,
+                train=False,
+                download=False,
+                transform=self.transform,
+            )
 
-        self.val_dataset = torchvision.datasets.MNIST(
-            self.root_path,
-            train=False,
-            download=False,
-            transform=self.transform,
-        )
+        if stage == "predict":
+            self.test_dataset = torchvision.datasets.MNIST(
+                self.root_path,
+                train=False,
+                download=False,
+                transform=self.transform,
+            )
 
-        print(len(self.val_dataset))
+        print(f"stage = {stage}")
 
     def train_dataloader(self) -> torch.utils.data.DataLoader:
         return torch.utils.data.DataLoader(
@@ -53,35 +60,10 @@ class MNISTDataModule(pl.LightningDataModule):
             num_workers=5,
         )
 
-
-def get_loaders(batch_size=32, root_path="./data/"):
-    transform = torchvision.transforms.Compose(
-        [
-            torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize((0.1307,), (0.3081,)),
-        ]
-    )
-
-    train_loader = torch.utils.data.DataLoader(
-        torchvision.datasets.MNIST(
-            root_path,
-            train=True,
-            download=False,
-            transform=transform,
-        ),
-        batch_size=batch_size,
-        shuffle=True,
-    )
-
-    test_loader = torch.utils.data.DataLoader(
-        torchvision.datasets.MNIST(
-            root_path,
-            train=False,
-            download=False,
-            transform=transform,
-        ),
-        batch_size=batch_size,
-        shuffle=False,
-    )
-
-    return train_loader, test_loader
+    def test_dataloader(self) -> torch.utils.data.DataLoader:
+        return torch.utils.data.DataLoader(
+            self.test_dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=5,
+        )

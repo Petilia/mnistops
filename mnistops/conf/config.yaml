@@ -8,7 +8,7 @@ data:
 
 train:
   learning_rate: 1e-3
-  n_epoch: 15
+  n_epoch: 10
   grad_accum_steps: 1
   accelerator: cuda
   devices:
@@ -26,9 +26,15 @@ train:
   detect_anomaly: false
 
 artifacts:
-  experiment_name: example-experiment
+  experiment_name: base-exp
   checkpoint:
-    use: false
+    use: true
+    dirpath: checkpoints
+    filename: "{epoch:02d}-{val_MulticlassAccuracy:.4f}"
+    monitor: val_MulticlassAccuracy
+    mode: max
+    save_top_k: 3
+    every_n_epochs: 3
 
 callbacks:
   model_summary:

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytorch_lightning as pl
 import torch
 from omegaconf import DictConfig
@@ -30,6 +32,20 @@ def train(cfg: DictConfig):
         ),
     ]
 
+    if cfg.artifacts.checkpoint.use:
+        checkpoint_callback = pl.callbacks.ModelCheckpoint(
+            dirpath=Path(cfg.artifacts.checkpoint.dirpath)
+            / cfg.artifacts.experiment_name,
+            filename=cfg.artifacts.checkpoint.filename,
+            monitor=cfg.artifacts.checkpoint.monitor,
+            mode=cfg.artifacts.checkpoint.mode,
+            save_top_k=cfg.artifacts.checkpoint.save_top_k,
+            every_n_epochs=cfg.artifacts.checkpoint.every_n_epochs,
+            verbose=True,
+        )
+
+        callbacks.append(checkpoint_callback)
+
     trainer = pl.Trainer(
         accelerator=cfg.train.accelerator,
         devices=cfg.train.devices,
@@ -51,3 +67,17 @@ def train(cfg: DictConfig):
     )
 
     trainer.fit(model=model, datamodule=dm)
+
+    # save best model path to .txt file
+    # (it is necessary to use best model in inference)
+    if cfg.artifacts.checkpoint.use:
+        print(checkpoint_callback.best_model_path)
+
+        best_model_name = (
+            Path(cfg.artifacts.checkpoint.dirpath)
+            / cfg.artifacts.experiment_name
+            / "best.txt"
+        )
+
+        with open(best_model_name, "w") as f:
+            f.write(checkpoint_callback.best_model_path)

@@ -1,9 +1,8 @@
 import hydra
 from omegaconf import DictConfig
 
+from mnistops.infer import infer
 from mnistops.train import train
-
-# from mnistops.infer import infer
 
 
 @hydra.main(
@@ -12,7 +11,7 @@ from mnistops.train import train
 def main(cfg: DictConfig):
     print(cfg)
     train(cfg)
-    # infer(cfg)
+    infer(cfg)
 
 
 if __name__ == "__main__":
