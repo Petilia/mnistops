@@ -1,91 +1,53 @@
-from pathlib import Path
-
+import pytorch_lightning as pl
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from sklearn.metrics import accuracy_score
+from omegaconf import DictConfig
 
-from .dataset import get_loaders
-from .model import SimpleNet
+from .dataset import MNISTDataModule
+from .model import MNISTModel
 
 
-def train_epoch(model, device, train_loader, optimizer, criterion):
-    model.train()
-    preds = []
-    gt = []
+def train(cfg: DictConfig):
+    pl.seed_everything(42)
+    torch.set_float32_matmul_precision("medium")
+    dm = MNISTDataModule(cfg)
+    model = MNISTModel(cfg)
 
-    for data, target in train_loader:
-        data = data.to(device)
-        target = target.to(device)
+    loggers = [
+        pl.loggers.MLFlowLogger(
+            experiment_name=cfg.artifacts.experiment_name,
+            tracking_uri="file:./.logs/mnistops-logs",
+        ),
+        pl.loggers.WandbLogger(
+            project="mnistops", name=cfg.artifacts.experiment_name
+        ),
+    ]
 
-        optimizer.zero_grad()
-        outputs = model(data)
-        loss = criterion(outputs, target)
-        loss.backward()
-        optimizer.step()
+    callbacks = [
+        pl.callbacks.LearningRateMonitor(logging_interval="step"),
+        pl.callbacks.DeviceStatsMonitor(),
+        pl.callbacks.RichModelSummary(
+            max_depth=cfg.callbacks.model_summary.max_depth
+        ),
+    ]
 
-        _, predictions = torch.max(outputs, 1)
-        preds += predictions.cpu().tolist()
-        gt += target.cpu().tolist()
-
-    accuracy = accuracy_score(gt, preds)
-    return accuracy
-
-
-def val_epoch(model, device, test_loader):
-    model.eval()
-    preds = []
-    gt = []
-
-    with torch.no_grad():
-        for data, target in test_loader:
-            data = data.to(device)
-            target = target.to(device)
-
-            outputs = model(data)
-
-            _, predictions = torch.max(outputs, 1)
-            preds += predictions.cpu().tolist()
-            gt += target.cpu().tolist()
-
-    accuracy = accuracy_score(gt, preds)
-    return accuracy
-
-
-def train_model(cfg):
-    if cfg.artifacts.save_ckpt:
-        Path(cfg.artifacts.ckpt_path).mkdir(parents=True, exist_ok=True)
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    model = SimpleNet(
-        n_classes=cfg.model.n_classes, dropout_rate=cfg.model.dropout
-    ).to(device)
-
-    optimizer = optim.Adam(model.parameters(), lr=cfg.train.learning_rate)
-
-    criterion = nn.CrossEntropyLoss()
-
-    train_loader, test_loader = get_loaders(
-        batch_size=cfg.data.batch_size, root_path=cfg.data.root_path
+    trainer = pl.Trainer(
+        accelerator=cfg.train.accelerator,
+        devices=cfg.train.devices,
+        precision=cfg.train.precision,
+        max_epochs=cfg.train.n_epoch,
+        accumulate_grad_batches=cfg.train.grad_accum_steps,
+        val_check_interval=cfg.train.val_check_interval,
+        overfit_batches=cfg.train.overfit_batches,
+        num_sanity_val_steps=cfg.train.num_sanity_val_steps,
+        deterministic=cfg.train.full_deterministic_mode,
+        benchmark=cfg.train.benchmark,
+        gradient_clip_val=cfg.train.gradient_clip_val,
+        profiler=cfg.train.profiler,
+        log_every_n_steps=cfg.train.log_every_n_steps,
+        detect_anomaly=cfg.train.detect_anomaly,
+        enable_checkpointing=cfg.artifacts.checkpoint.use,
+        logger=loggers,
+        callbacks=callbacks,
     )
 
-    best_val_acc = 0
-
-    for _ in range(cfg.train.n_epoch):
-        train_accuracy = train_epoch(
-            model, device, train_loader, optimizer, criterion
-        )
-
-        val_accuracy = val_epoch(model, device, test_loader)
-
-        print(
-            f"train_accuracy = {train_accuracy}, \nval_accuracy={val_accuracy}"
-        )
-
-        if val_accuracy > best_val_acc:
-            savepath = (
-                Path(cfg.artifacts.ckpt_path) / cfg.artifacts.best_model_name
-            )
-            best_val_acc = val_accuracy
-            torch.save(model.state_dict(), savepath)
+    trainer.fit(model=model, datamodule=dm)

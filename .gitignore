@@ -3,3 +3,7 @@ __pycache__
 .vscode
 dist
 outputs
+mlruns
+.logs
+wandb
+mnistops/notebooks/trash.ipynb

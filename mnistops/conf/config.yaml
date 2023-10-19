@@ -4,14 +4,32 @@ model:
 
 data:
   root_path: "./data/"
-  batch_size: 32
+  batch_size: 128
 
 train:
   learning_rate: 1e-3
   n_epoch: 15
+  grad_accum_steps: 1
+  accelerator: cuda
+  devices:
+    - 0
+  precision: 16-mixed
+  val_check_interval: 1.0
+  overfit_batches: 0
+  num_sanity_val_steps: 4
+  full_deterministic_mode: false
+  benchmark: false
+  gradient_clip_val: 1.0
+  profiler:
+  log_every_n_steps: 50
+  batch_size_finder: false
+  detect_anomaly: false
 
 artifacts:
-  save_ckpt: true
-  ckpt_path: "./outputs/checkpoints"
-  best_model_name: "best_model.pth"
-  metric_file_name: "metrics.txt"
+  experiment_name: example-experiment
+  checkpoint:
+    use: false
+
+callbacks:
+  model_summary:
+    max_depth: 1
