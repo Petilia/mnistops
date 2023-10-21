@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Any
 
 import omegaconf
+import pandas as pd
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
@@ -48,6 +50,7 @@ class MNISTModel(pl.LightningModule):
 
         self.train_metrics = metrics.clone(prefix="train_")
         self.val_metrics = metrics.clone(prefix="val_")
+        self.test_metrics = metrics.clone()
 
     def forward(self, x):
         return self.model(x)
@@ -84,6 +87,25 @@ class MNISTModel(pl.LightningModule):
         val_metrics = self.val_metrics.compute()
         self.log_dict(val_metrics, prog_bar=True)
         self.val_metrics.reset()
+
+    def test_step(self, batch: Any, batch_idx: int, dataloader_idx=0):
+        data, target = batch
+        outputs = self(data)
+        self.test_metrics.update(outputs, target)
+
+    def on_test_epoch_end(self):
+        test_metrics = self.test_metrics.compute()
+        metric_filename = (
+            Path(self.cfg.artifacts.checkpoint.dirpath)
+            / self.cfg.artifacts.experiment_name
+            / "metrics.csv"
+        )
+
+        test_metrics = {k: [v.item()] for k, v in test_metrics.items()}
+
+        print(test_metrics)
+        pd.DataFrame(test_metrics).to_csv(metric_filename, index=False)
+        self.test_metrics.reset()
 
     def configure_optimizers(self) -> Any:
         optimizer = torch.optim.AdamW(
