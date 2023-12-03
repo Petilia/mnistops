@@ -162,3 +162,4 @@ checkpoints
 wandb
 mnistops/notebooks/trash.ipynb
 lightning_logs
+mnistops/check_dvc_get_data.py

@@ -1,25 +1,41 @@
+from pathlib import Path
 from typing import Optional
 
 import pytorch_lightning as pl
 import torch
 import torchvision
+from dvc.api import DVCFileSystem
 from sklearn.model_selection import train_test_split
 
 
 class MNISTDataModule(pl.LightningDataModule):
     def __init__(self, cfg):
         super().__init__()
+
         self.save_hyperparameters()
         self.root_path = cfg.data.root_path
         self.batch_size = cfg.data.batch_size
+
         self.transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize((0.1307,), (0.3081,)),
+                torchvision.transforms.Normalize(
+                    (cfg.data.img_mean,), (cfg.data.img_std,)
+                ),
             ]
         )
 
+    def prepare_data(self):
+        if not Path(self.root_path).exists():
+            fs = DVCFileSystem(".", subrepos=True, rev="master")
+            fs.get("data", "data", recursive=True)
+            print("Data downloaded")
+        else:
+            print("Data already exists")
+
     def setup(self, stage: Optional[str]):
+        self.prepare_data()
+
         if stage == "fit":
             self.train_dataset = torchvision.datasets.MNIST(
                 self.root_path,

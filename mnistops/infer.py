@@ -10,7 +10,7 @@ def infer(cfg):
     # Getting best checkpoint name
     best_model_name = (
         Path(cfg.artifacts.checkpoint.dirpath)
-        / cfg.artifacts.experiment_name
+        / cfg.loggers.experiment_name
         / "best.txt"
     )
 

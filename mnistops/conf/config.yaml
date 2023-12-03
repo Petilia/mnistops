@@ -1,8 +1,19 @@
+exp_name: &exp_name base-exp
+
 model:
   n_classes: 10
   dropout: 0.3
 
+export:
+  export_path: "./outputs/export"
+  export_name: "model"
+  name_version: True
+  input_sample_shape: [1, 1, 28, 28]
+
 data:
+  img_size: 28
+  img_mean: 0.1307
+  img_std: 0.3081
   root_path: "./data/"
   batch_size: 128
 
@@ -24,8 +35,18 @@ train:
   log_every_n_steps: 50
   detect_anomaly: false
 
+loggers:
+  experiment_name: *exp_name
+  wandb:
+    project: mnistops
+  mlflow:
+    tracking_uri: http://localhost:5000
+    artifact_location: ./outputs/mlflow_artifacts
+    save_dir: ./outputs/mlfolw_logs
+    log_model: True
+    tags: { exp_name: *exp_name }
+
 artifacts:
-  experiment_name: base-exp
   checkpoint:
     use: true
     dirpath: checkpoints

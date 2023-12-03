@@ -97,7 +97,7 @@ class MNISTModel(pl.LightningModule):
         test_metrics = self.test_metrics.compute()
         metric_filename = (
             Path(self.cfg.artifacts.checkpoint.dirpath)
-            / self.cfg.artifacts.experiment_name
+            / self.cfg.loggers.experiment_name
             / "metrics.csv"
         )
 

@@ -16,11 +16,16 @@ def train(cfg: DictConfig):
 
     loggers = [
         pl.loggers.MLFlowLogger(
-            experiment_name=cfg.artifacts.experiment_name,
-            tracking_uri="file:./.logs/mnistops-logs",
+            experiment_name=cfg.loggers.experiment_name,
+            tracking_uri=cfg.loggers.mlflow.tracking_uri,
+            artifact_location=cfg.loggers.mlflow.artifact_location,
+            save_dir=cfg.loggers.mlflow.save_dir,
+            log_model=cfg.loggers.mlflow.log_model,
+            tags=cfg.loggers.mlflow.tags,
         ),
         pl.loggers.WandbLogger(
-            project="mnistops", name=cfg.artifacts.experiment_name
+            project=cfg.loggers.wandb.project,
+            name=cfg.loggers.experiment_name,
         ),
     ]
 
@@ -35,7 +40,7 @@ def train(cfg: DictConfig):
     if cfg.artifacts.checkpoint.use:
         checkpoint_callback = pl.callbacks.ModelCheckpoint(
             dirpath=Path(cfg.artifacts.checkpoint.dirpath)
-            / cfg.artifacts.experiment_name,
+            / cfg.loggers.experiment_name,
             filename=cfg.artifacts.checkpoint.filename,
             monitor=cfg.artifacts.checkpoint.monitor,
             mode=cfg.artifacts.checkpoint.mode,
@@ -75,7 +80,7 @@ def train(cfg: DictConfig):
 
         best_model_name = (
             Path(cfg.artifacts.checkpoint.dirpath)
-            / cfg.artifacts.experiment_name
+            / cfg.loggers.experiment_name
             / "best.txt"
         )
 
