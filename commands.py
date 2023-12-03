@@ -7,9 +7,7 @@ from mnistops.run_server import run_server
 from mnistops.train import train
 
 
-@hydra.main(
-    config_path="./mnistops/conf", config_name="config", version_base="1.3"
-)
+@hydra.main(config_path="./configs", config_name="config", version_base="1.3")
 def main(cfg: DictConfig):
     print(cfg)
     train(cfg)

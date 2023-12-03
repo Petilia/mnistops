@@ -5,8 +5,23 @@ The project was carried out as part of a training course on MLOps.
 The project considers the problem of digit classification on the example of
 MNIST dataset.
 
-The entry point that runs the scripts for training and inferencing is
-[commands.py](./commands.py).
+## Usage
+
+The entry point that runs the scripts for training, inferencing, converting and
+MLFlow running is [commands.py](./commands.py).
+
+It is assumed that MLFlow is running locally:
+
+```bash
+mlflow server --host localhost --port 5000 --artifacts-destination ./outputs/mlflow_artifacts
+```
+
+After starting the server, you must execute the command (this assumes that the
+python environment built by poetry is being used):
+
+```bash
+python3 commands.py
+```
 
 ## Project Roadmap
 
