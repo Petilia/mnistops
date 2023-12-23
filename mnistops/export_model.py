@@ -1,11 +1,12 @@
 from pathlib import Path
 
 import torch
+from hydra import compose, initialize
 
 from .model import MNISTModel
 
 
-def export_2_onnx(cfg):
+def run_export_2_onnx(cfg):
     best_model_name = (
         Path(cfg.artifacts.checkpoint.dirpath)
         / cfg.loggers.experiment_name
@@ -38,3 +39,23 @@ def export_2_onnx(cfg):
             "CLASS_PROBS": {0: "BATCH_SIZE"},
         },
     )
+
+
+def export_2_onnx(
+    config_name: str = "config", config_path: str = "../configs", **kwargs
+):
+    initialize(
+        version_base="1.3",
+        config_path=config_path,
+        job_name="mnistops-train",
+    )
+    cfg = compose(
+        config_name=config_name,
+        overrides=[f"{k}={v}" for k, v in kwargs.items()],
+    )
+
+    run_export_2_onnx(cfg)
+
+
+if __name__ == "__main__":
+    raise RuntimeError("Use `python commands.py export`")

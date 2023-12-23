@@ -2,13 +2,14 @@ from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
+from hydra import compose, initialize
 from omegaconf import DictConfig
 
 from .dataset import MNISTDataModule
 from .model import MNISTModel
 
 
-def train(cfg: DictConfig):
+def run_training(cfg: DictConfig):
     pl.seed_everything(42)
     torch.set_float32_matmul_precision("medium")
     dm = MNISTDataModule(cfg)
@@ -86,3 +87,23 @@ def train(cfg: DictConfig):
 
         with open(best_model_name, "w") as f:
             f.write(checkpoint_callback.best_model_path)
+
+
+def train(
+    config_name: str = "config", config_path: str = "../configs", **kwargs
+):
+    initialize(
+        version_base="1.3",
+        config_path=config_path,
+        job_name="mnistops-train",
+    )
+    cfg = compose(
+        config_name=config_name,
+        overrides=[f"{k}={v}" for k, v in kwargs.items()],
+    )
+
+    run_training(cfg)
+
+
+if __name__ == "__main__":
+    raise RuntimeError("Use `python commands.py train`")

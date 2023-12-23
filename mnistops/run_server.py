@@ -3,6 +3,7 @@ from pathlib import Path
 import mlflow
 import numpy as np
 import onnx
+from hydra import compose, initialize
 from PIL import Image
 from scipy.special import softmax
 
@@ -23,7 +24,7 @@ def preprocess_image(image_path, cfg):
     return image_data
 
 
-def run_server(cfg, image_path):
+def run_mlflow_server(cfg, image_path):
     model_name = f"{cfg.export.export_name}.onnx"
     filepath = Path(cfg.export.export_path) / model_name
 
@@ -53,3 +54,26 @@ def run_server(cfg, image_path):
     # Print probabilities of all classes
     for i, prob in enumerate(probs[0]):
         print(f"Class {i}: {100*prob}%")
+
+
+def run_server(
+    image_path: str = "./img/sample.png",
+    config_name: str = "config",
+    config_path: str = "../configs",
+    **kwargs,
+):
+    initialize(
+        version_base="1.3",
+        config_path=config_path,
+        job_name="mnistops-train",
+    )
+    cfg = compose(
+        config_name=config_name,
+        overrides=[f"{k}={v}" for k, v in kwargs.items()],
+    )
+
+    run_mlflow_server(cfg, image_path)
+
+
+if __name__ == "__main__":
+    raise RuntimeError("Use `python commands.py run_server`")
