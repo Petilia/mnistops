@@ -1,11 +1,18 @@
+from functools import lru_cache
 from pathlib import Path
 
 import mlflow
 import numpy as np
 import onnx
 from hydra import compose, initialize
+from omegaconf import OmegaConf
 from PIL import Image
 from scipy.special import softmax
+from tritonclient.http import (
+    InferenceServerClient,
+    InferInput,
+    InferRequestedOutput,
+)
 
 
 def preprocess_image(image_path, cfg):
@@ -22,6 +29,55 @@ def preprocess_image(image_path, cfg):
         image_data = np.expand_dims(image_data, 0)
         image_data = np.expand_dims(image_data, 0)
     return image_data
+
+
+@lru_cache(maxsize=1)
+def get_triton_client(cfg: OmegaConf):
+    return InferenceServerClient(url=cfg.triton.server_url)
+
+
+def infer_triton(cfg: OmegaConf, image_path: str):
+    triton_client = get_triton_client(cfg)
+    inputs = []
+    outputs = []
+    input_data = preprocess_image(image_path, cfg)
+
+    inputs.append(InferInput("IMAGES", input_data.shape, "FP32"))
+    inputs[-1].set_data_from_numpy(input_data, binary_data=False)
+
+    outputs.append(InferRequestedOutput("CLASS_PROBS", binary_data=True))
+
+    # Triton Inference
+    results = triton_client.infer(
+        cfg.triton.model_name, inputs, outputs=outputs
+    )
+
+    probs = softmax(results.as_numpy("CLASS_PROBS"))
+
+    # Print the class with the maximum probability
+    print(f"Class with max probability: {np.argmax(probs)}")
+
+    # Print probabilities of all classes
+    for i, prob in enumerate(probs[0]):
+        print(f"Class {i}: {100*prob}%")
+
+
+def run_triton_server(
+    image_path: str = "./img/sample.png",
+    config_path: str = "../configs",
+    config_name: str = "default",
+    **kwargs,
+):
+    initialize(
+        version_base="1.3",
+        config_path=config_path,
+        job_name="mnistops-train",
+    )
+    cfg = compose(
+        config_name=config_name,
+        overrides=[f"{k}={v}" for k, v in kwargs.items()],
+    )
+    infer_triton(cfg, image_path)
 
 
 def run_mlflow_server(cfg, image_path):
@@ -56,7 +112,7 @@ def run_mlflow_server(cfg, image_path):
         print(f"Class {i}: {100*prob}%")
 
 
-def run_server(
+def test_mlflow_server(
     image_path: str = "./img/sample.png",
     config_name: str = "config",
     config_path: str = "../configs",
@@ -73,6 +129,29 @@ def run_server(
     )
 
     run_mlflow_server(cfg, image_path)
+
+
+if __name__ == "__main__":
+    raise RuntimeError("Use `python commands.py run_server`")
+
+
+def test_triton_server(
+    image_path: str = "./img/sample.png",
+    config_name: str = "config",
+    config_path: str = "../configs",
+    **kwargs,
+):
+    initialize(
+        version_base="1.3",
+        config_path=config_path,
+        job_name="mnistops-train",
+    )
+    cfg = compose(
+        config_name=config_name,
+        overrides=[f"{k}={v}" for k, v in kwargs.items()],
+    )
+
+    infer_triton(cfg, image_path)
 
 
 if __name__ == "__main__":

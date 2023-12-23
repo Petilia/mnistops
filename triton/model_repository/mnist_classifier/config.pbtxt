@@ -1,0 +1,29 @@
+name: "mnist_classifier"
+backend: "onnxruntime"
+# max_batch_size: 4
+
+input [
+    {
+        name: "IMAGES"
+        data_type: TYPE_FP32
+        dims: [ -1, 1, 28, 28 ]
+    }
+]
+
+output [
+    {
+        name: "CLASS_PROBS"
+        data_type: TYPE_FP32
+        dims: [ -1, 10 ]
+    }
+]
+instance_group [ { count: 4 }]
+optimization { execution_accelerators {
+    cpu_execution_accelerator : [ {
+      name : "openvino"
+    }]
+  }}
+# dynamic_batching {
+#     # preferred_batch_size: 4
+#     # max_queue_delay_microseconds: 200
+# }
