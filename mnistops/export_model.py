@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import torch
@@ -39,6 +40,10 @@ def run_export_2_onnx(cfg):
             "CLASS_PROBS": {0: "BATCH_SIZE"},
         },
     )
+
+    # copy to triton folder
+    triton_filepath = Path(cfg.triton.models_path) / "model.onnx"
+    shutil.copy(filepath, triton_filepath)
 
 
 def export_2_onnx(
