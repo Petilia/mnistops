@@ -4,6 +4,7 @@ from pathlib import Path
 import mlflow
 import numpy as np
 import onnx
+import torch
 from hydra import compose, initialize
 from omegaconf import OmegaConf
 from PIL import Image
@@ -13,6 +14,8 @@ from tritonclient.http import (
     InferInput,
     InferRequestedOutput,
 )
+
+from .model import MNISTModel
 
 
 def preprocess_image(image_path, cfg):
@@ -62,24 +65,6 @@ def infer_triton(cfg: OmegaConf, image_path: str):
         print(f"Class {i}: {100*prob}%")
 
 
-def run_triton_server(
-    image_path: str = "./img/sample.png",
-    config_path: str = "../configs",
-    config_name: str = "default",
-    **kwargs,
-):
-    initialize(
-        version_base="1.3",
-        config_path=config_path,
-        job_name="mnistops-train",
-    )
-    cfg = compose(
-        config_name=config_name,
-        overrides=[f"{k}={v}" for k, v in kwargs.items()],
-    )
-    infer_triton(cfg, image_path)
-
-
 def run_mlflow_server(cfg, image_path):
     model_name = f"{cfg.export.export_name}.onnx"
     filepath = Path(cfg.export.export_path) / model_name
@@ -112,6 +97,48 @@ def run_mlflow_server(cfg, image_path):
         print(f"Class {i}: {100*prob}%")
 
 
+def run_triton_sanity_check(cfg: OmegaConf, image_path: str):
+    best_model_name = (
+        Path(cfg.artifacts.checkpoint.dirpath)
+        / cfg.loggers.experiment_name
+        / "best.txt"
+    )
+
+    with open(best_model_name, "r") as f:
+        best_checkpoint_name = f.readline()
+
+    # torch inference
+    model = MNISTModel.load_from_checkpoint(best_checkpoint_name).to("cpu")
+    model.eval()
+
+    input_data = preprocess_image(image_path, cfg)
+
+    with torch.no_grad():
+        torch_output = model(torch.from_numpy(input_data)).cpu().numpy()
+
+    # triton inference
+    triton_client = get_triton_client(cfg)
+    inputs = []
+    outputs = []
+
+    inputs.append(InferInput("IMAGES", input_data.shape, "FP32"))
+    inputs[-1].set_data_from_numpy(input_data, binary_data=False)
+
+    outputs.append(InferRequestedOutput("CLASS_PROBS", binary_data=True))
+
+    # Triton Inference
+    results = triton_client.infer(
+        cfg.triton.model_name, inputs, outputs=outputs
+    )
+
+    triton_output = results.as_numpy("CLASS_PROBS")
+
+    assert np.allclose(torch_output, triton_output, atol=0.01)
+
+    print(f"torch_output: {torch_output}, \ntriton_output: {triton_output}")
+    print("Tensors are equal. Sanity check passed!")
+
+
 def test_mlflow_server(
     image_path: str = "./img/sample.png",
     config_name: str = "config",
@@ -131,10 +158,6 @@ def test_mlflow_server(
     run_mlflow_server(cfg, image_path)
 
 
-if __name__ == "__main__":
-    raise RuntimeError("Use `python commands.py run_server`")
-
-
 def test_triton_server(
     image_path: str = "./img/sample.png",
     config_name: str = "config",
@@ -152,6 +175,25 @@ def test_triton_server(
     )
 
     infer_triton(cfg, image_path)
+
+
+def triton_sanity_check(
+    image_path: str = "./img/sample.png",
+    config_name: str = "config",
+    config_path: str = "../configs",
+    **kwargs,
+):
+    initialize(
+        version_base="1.3",
+        config_path=config_path,
+        job_name="mnistops-train",
+    )
+    cfg = compose(
+        config_name=config_name,
+        overrides=[f"{k}={v}" for k, v in kwargs.items()],
+    )
+
+    run_triton_sanity_check(cfg, image_path)
 
 
 if __name__ == "__main__":
