@@ -1,38 +1,83 @@
 ## Project Description
 
-The project was carried out as part of a training course on MLOps.
+Проект выполнен в рамках учебного курса по MLOps.
 
-The project considers the problem of digit classification on the example of
-MNIST dataset.
+Рассматривается задача классификации цифр на датасете MNIST
 
-## Usage
+## Usage [train + dummy inference + export]
 
-The entry point that runs the scripts for training, inferencing, converting and
-MLFlow running is [commands.py](./commands.py).
+Входной точкой для всего проекта является файл [commands.py](./commands.py).
 
-It is assumed that MLFlow is running locally:
+При работе предполагается, что локально запущен сервер MLFlow:
 
 ```bash
 mlflow server --host localhost --port 5000 --artifacts-destination ./outputs/mlflow_artifacts
 ```
 
-After starting the server, you must execute the command (this assumes that the
-python environment built by poetry is being used):
+После того, как сервер запущен, можно использовать команды из commands.py
+
+Обучение:
 
 ```bash
-python3 commands.py
+python3 commands.py train
 ```
 
-## Project Roadmap
+Стандартный torch-инференс:
 
-[v1-dummy-torch](https://github.com/Petilia/mnistops/tree/v1-dummy-torch) -
-Standard learning and inference on torch. Project configuration is hardcoded in
-constants.py file.
+```bash
+python3 commands.py infer
+```
 
-[v2-hydra-torch](https://github.com/Petilia/mnistops/tree/v2-hydra-torch) -
-Standard learning and inference on torch. Project configuration is set as
-hydra-config.
+Экспорт модели в onnx (можно использовать предобученные веса, указав в конфиге
+pretrained.use=true или передав это в командной строке при запуске, т.к.
+используется fire и он перезапишет этот параметр автоматически):
 
-[v3-hydra-lightning](https://github.com/Petilia/mnistops/tree/v3-hydra-lightning)
-(current version). Learning and inference on the pytorch lightning framework.
-Project configuration is set as hydra-config.
+```bash
+python3 commands.py export
+# or
+python3 commands.py export --pretrained.use true
+
+```
+
+## Usage [inference]
+
+В качестве аргумента для инференса во всех случаях можно передать путь к
+интересуюoему изображению через командную строке --image-path <path/to/image>.
+Если не передавать, используется дефолтное изображение.
+
+Инференс на MLFlow:
+
+```bash
+python3 commands.py run_mlflow_infer
+# or
+python3 commands.py run_mlflow_infer --image-path <path/to/image>
+```
+
+Перед инференсом на Triton необходимо запустить контейнер:
+
+```
+cd triton
+docker-compose up
+```
+
+Инференс на Triton:
+
+```bash
+python3 commands.py run_triton_infer
+# or
+python3 commands.py run_triton_infer --image-path <path/to/image>
+```
+
+Проверка корректности triton-инференса (происходит сравнение выходов модели на
+torch-е и на triton-е):
+
+```bash
+python3 commands.py triton_sanity_check
+# or
+python3 commands.py triton_sanity_check --image-path <path/to/image>
+```
+
+## HW3 Report
+
+В [HW3_report.md](./HW3_report.md) лежит отчет о 3 домашнем задании с метриками
+и выводами по оптимизации triton-инференса.
