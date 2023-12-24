@@ -1,5 +1,10 @@
 exp_name: &exp_name base-exp
 
+pretrained:
+  use: false
+  dirpath: models
+  model: "pretrained.ckpt"
+
 model:
   n_classes: 10
   dropout: 0.3
