@@ -19,7 +19,7 @@
 
 ## Task description
 
-Задача состоит в классификации датасета MNIST.
+Задача состоит в классификации датасета MNIST на 10 классов.
 
 ## Model repository structure
 
@@ -74,17 +74,17 @@ perf_analyzer -m mnist_classifier --percentile=95 -u localhost:8500 --shape=IMAG
 | Dynamic Batching      | $1$        | $577$               | $2.1$           |         |
 | Dynamic Batching      | $2$        | $795$               | $3.9$           |         |
 | Dynamic Batching      | $4$        | $898$               | $11.8$          |         |
-| Dynamic Batching      | $8$        | $$                  | $$              |         |
+| Dynamic Batching      | $8$        | $708$               | $51.8$          |         |
 |                       |            |                     |                 |
 | OpenVino              | $1$        | $2001$              | $0.6$           |         |
 | OpenVino              | $2$        | $1692$              | $2.9$           |         |
 | OpenVino              | $4$        | $2380$              | $3.5$           |         |
 | OpenVino              | $8$        | $2229$              | $8.1$           |         |
 |                       |            |                     |                 |
-| DB + OpenVino + MI(2) | $1$        | $$                  | $$              |         |
-| DB + OpenVino + MI(2) | $2$        | $$                  | $$              |         |
-| DB + OpenVino + MI(2) | $4$        | $$                  | $$              |         |
-| DB + OpenVino + MI(2) | $8$        | $$                  | $$              |         |
+| DB + OpenVino + MI(2) | $1$        | $2006$              | $1.9$           |         |
+| DB + OpenVino + MI(2) | $2$        | $1864$              | $2.6$           |         |
+| DB + OpenVino + MI(2) | $4$        | $2563$              | $3.0$           |         |
+| DB + OpenVino + MI(2) | $8$        | $2629$              | $6.4$           |         |
 
 Можно оптимизировать инференс добавлением дополнительных инстансов модели (в
 стандартном режиме инстанс 1, а добавление новых может увеличить throughput и
@@ -108,5 +108,31 @@ optimization { execution_accelerators {
 размер батча, если в очереди накопилось много задач.
 
 ```
+dynamic_batching {}
+```
+
+## Conclusion
+
+- Наибольший прирост с точки зрения throughput дает инференс на OpenVino (что
+  неудивительно, так как он предназначен для инференса на cpu)
+
+- Увеличение числа инстансов дает прирост относительно базового инференса при
+  числе инстансов в 2, при 4 инстансах результаты хуже
+
+- Dynamic Batching также дает прирост относительного базового инференса, но в
+  основном в throughput
+
+- В сумме все оптимизации вместе работают лучше, чем по отдельности, но главный
+  вклад вносит OpenVino
+
+На основании последовательного подбора выбрана следующая конфигурация инференса:
+
+```
+instance_group [ { count: 2 }]
+optimization { execution_accelerators {
+    cpu_execution_accelerator : [ {
+      name : "openvino"
+    }]
+  }}
 dynamic_batching {}
 ```

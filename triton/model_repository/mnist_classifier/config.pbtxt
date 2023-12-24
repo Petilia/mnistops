@@ -1,6 +1,5 @@
 name: "mnist_classifier"
 backend: "onnxruntime"
-# max_batch_size: 4
 
 input [
     {
@@ -17,13 +16,11 @@ output [
         dims: [ -1, 10 ]
     }
 ]
-instance_group [ { count: 4 }]
+
+instance_group [ { count: 2 }]
 optimization { execution_accelerators {
     cpu_execution_accelerator : [ {
       name : "openvino"
     }]
   }}
-# dynamic_batching {
-#     # preferred_batch_size: 4
-#     # max_queue_delay_microseconds: 200
-# }
+dynamic_batching {}
